@@ -1,0 +1,53 @@
+# Unlock the 2-to-2 multisignature output
+# Send to a P2PKH address: msfTfNj6FicTNBShCJBhoxvhHoM794cKsZ
+# Share the UNSIGNED transaction and SIGNATURE to the other partner
+
+def unlock_multisig():
+    # setup the network
+    setup('testnet')
+
+    # create transaction input from tx id of MultiSig UTXO (contained 0.0009 tBTC)
+    txin = TxInput('d28d1de0c6320a340466d02f7828689a9247b668e791758d86aabe2848519b6e', 0)
+
+    # create transaction output using P2PKH scriptPubKey (locking script)
+    addr = P2pkhAddress('msfTfNj6FicTNBShCJBhoxvhHoM794cKsZ')
+    txout = TxOutput(to_satoshis(0.0008), Script(['OP_DUP', 'OP_HASH160', addr.to_hash160(), 
+                                                  'OP_EQUALVERIFY', 'OP_CHECKSIG']))
+    
+    # create transaction from inputs/outputs -- default locktime is used
+    tx = Transaction([txin], [txout])
+
+    # print raw transaction
+    print("\nRaw unsigned transaction:\n" + tx.serialize())
+
+    # use the private key corresponding to the address that contains the UTXO to unlock the input
+    # Partner_1's private key
+    sk1 = PrivateKey('cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZouACYFT86628Lr') 
+    
+    # Partner_1's public key locked in ScriptPubKey
+    pk1 = '025953e2b9930e8a99c84887f269d3faaff7f2fb9e2a224bcbfbdb6c0bf356103c'
+    
+    # Partner_2's public key locked in ScriptPubKey
+    pk2 = '02019662a808d4a0df7e8c1ee8b26646e59cfaa92ebd906bde14b4bda5113fa2a9'
+    
+    # Partner_1's signature
+    sig1 = sk1.sign_input(tx, 0, Script([2, pk1, pk2, 2, 'OP_CHECKMULTISIG']))
+    
+    print("\n Partner_1's signature:\n" + sig1)
+    
+    # Partner_2's private key - to be filled in
+    # sk2 = PrivateKey('') 
+    
+    # Partner_2's signature
+    # sig2 = sk2.sign_input(tx, 0, Script([2, pk1, pk2, 2, 'OP_CHECKMULTISIG']))
+    
+    # set the scriptSig (unlocking script)
+    # txin.script_sig = Script([0, sig1, sig2])
+    # signed_tx = tx.serialize()
+    
+    # print raw signed transaction ready to be broadcasted
+    # print("\nRaw signed transaction:\n" + signed_tx)
+
+    # Result: raw unsigned transaction and signature of Partner_1
+    
+unlock_multisig()
