@@ -1,0 +1,27 @@
+// Faucet properties: 
+// Anyone can pay the contract to increase the contract's balance
+// Anyone can withdraw from the contract with a max amount being a variable that you specify
+
+/// SPDX-License-Identifier: GPL-3.0
+// Version of Solidity compiler this program was written for pragma solidity ^0.6.0;
+
+// Simple Faucet
+contract SimpleFaucet {
+    
+    // Set max_amount
+    uint public max_amount = 0.1 ether;
+    
+    // Give out coin to anyone who asks
+    function withdraw(uint withdraw_amount) public {
+
+        // Limit withdrawal amount
+        require(withdraw_amount <= max_amount);
+        require(address(this).balance >= withdraw_amount,
+                        "Insufficient croissants in faucet for withdrawal request.");
+        
+        // Send to the address that requested it
+        msg.sender.transfer(withdraw_amount);
+    }
+    // Accept any incoming amount
+    receive () external payable {}
+}
