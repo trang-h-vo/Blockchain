@@ -1,0 +1,32 @@
+# Generate public key, private key & address
+# Library used: https://github.com/karask/python-bitcoin-utils
+
+from bitcoinutils.setup import setup
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput, Sequence
+from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey
+from bitcoinutils.script import Script
+from bitcoinutils.constants import TYPE_RELATIVE_TIMELOCK
+from bitcoinutils.keys import P2pkhAddress, PrivateKey, PublicKey
+
+def generate_keys(n):
+    # Set up the network
+    setup('testnet')
+
+    # Create a private key
+    priv = PrivateKey(secret_exponent = n)
+
+    # Print the private key
+    print("\n Private key WIF:", priv.to_wif(compressed=True))
+
+    # Derive the public key
+    pub = priv.get_public_key()
+   
+    # Print the public key
+    print("Public key:", pub.to_hex(compressed=True)) 
+   
+    # Get address from public key
+    address = pub.get_address()
+
+    # Print the address and hash160 - default is compressed address
+    print("New Address:", address.to_string())
+    print("Hash160:", address.to_hash160())
