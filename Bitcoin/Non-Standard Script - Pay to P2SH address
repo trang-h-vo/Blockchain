@@ -1,0 +1,41 @@
+# Send to a P2SH address containing non-standard script
+
+from bitcoinutils.setup import setup
+from bitcoinutils.utils import to_satoshis
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.keys import P2pkhAddress, P2shAddress, PrivateKey
+from bitcoinutils.script import Script
+
+
+def to_non_standard_p2sh():
+    # setup the network
+    setup('testnet')
+
+    # create transaction input from tx id of UTXO P2PKH (contained 0.00055 tBTC)
+    txin = TxInput('c5efb133f3d04668294741eaa7c91d2ab3488891704f6f1728451bd2e6f4801e', 1)
+ 
+    # output with non-standard script wrapped in P2SH, remaining 0.00032 is tx fees
+    nonstd_address = P2shAddress('2MueD8ADwrvaHsSY7zXCrusCCSaxYeLFEkr')
+    txout = TxOutput(to_satoshis(0.00023), Script(['OP_HASH160', 
+                                                   nonstd_address.to_hash160(), 'OP_EQUAL']) ) 
+   
+    # create transaction - default locktime is used
+    tx = Transaction([txin], [txout])
+
+    # keys and address corresponding to the UTXO
+    sk = PrivateKey('cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9o4KgthY6Fje7Vptx')
+    pk = sk.get_public_key().to_hex()
+    from_addr = P2pkhAddress('mo6jbdKcdPVsEC8jBDJajspTF4Ymn35h15')
+    
+    # signature for the txin
+    sig = sk.sign_input(tx, 0, from_addr.to_script_pub_key() )
+
+    # set the scriptSig (unlocking script)
+    txin.script_sig = Script([sig, pk])
+    signed_tx = tx.serialize()
+
+    # print raw signed transaction ready to be broadcasted
+    print("\nRaw signed transaction:\n" + signed_tx)
+    print("\nTxId:", tx.get_txid())
+    
+to_non_standard_p2sh()
