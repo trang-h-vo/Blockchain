@@ -1,0 +1,52 @@
+# Create a new transaction to a 2-to-2 multi-signature output
+
+from bitcoinutils.setup import setup
+from bitcoinutils.utils import to_satoshis
+from bitcoinutils.transactions import Transaction, TxInput, TxOutput
+from bitcoinutils.keys import P2pkhAddress, PrivateKey
+from bitcoinutils.script import Script
+
+
+def new_p2multisig():
+    # setup the network
+    setup('testnet')
+
+    # create transaction input from tx id of UTXO (contained 0.0009 tBTC)
+    txin = TxInput('64b92ac72cbefc52b73cd2601803ad15690ee3c6e3d0c3b4cd1c959f1eab2edb', 0)
+
+    # create transaction output using P2PKH scriptPubKey (locking script) with 2 public keys
+    addr = P2pkhAddress('mreLpAzPWBtdwBC9NMEsBy1jkQ3phjy1Eh')
+    
+    # Trang's public key
+    pk1 = '025953e2b9930e8a99c84887f269d3faaff7f2fb9e2a224bcbfbdb6c0bf356103c'
+    
+    # Prof's public key
+    pk2 = '02019662a808d4a0df7e8c1ee8b26646e59cfaa92ebd906bde14b4bda5113fa2a9'
+    
+    txout = TxOutput(to_satoshis(0.0005), Script([2, pk1, pk2, 2, 'OP_CHECKMULTISIG']))
+    
+    # create another output to get the change 0.0003 - remaining 0.0001 is tx fees
+    change_addr = P2pkhAddress('mjcJVG8riLe6jcvMPg4vvSbVc6csuq9a3w') 
+    change_txout = TxOutput(to_satoshis(0.00045), Script(['OP_DUP', 'OP_HASH160', 
+                                                          change_addr.to_hash160(), 'OP_EQUALVERIFY', 'OP_CHECKSIG']))
+
+    # create transaction from inputs/outputs -- default locktime is used
+    tx = Transaction([txin], [txout, change_txout])
+
+    # use the private key corresponding to the address that contains the UTXO to sign the input
+    sk = PrivateKey('cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZoy51EpQYjzbnVX')
+    from_addr = P2pkhAddress('mjcJVG8riLe6jcvMPg4vvSbVc6csuq9a3w') 
+    sig = sk.sign_input(tx, 0, Script(['OP_DUP', 'OP_HASH160', from_addr.to_hash160(), 
+                                       'OP_EQUALVERIFY', 'OP_CHECKSIG']))
+     
+    # get public key as hex
+    pk = sk.get_public_key().to_hex()
+
+    # set the scriptSig (unlocking script)
+    txin.script_sig = Script([sig, pk])
+    signed_tx = tx.serialize()
+    
+    # print raw signed transaction ready to be broadcasted
+    print("\nRaw signed transaction:\n" + signed_tx)
+
+new_p2multisig()
