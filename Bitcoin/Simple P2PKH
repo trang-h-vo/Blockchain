@@ -1,0 +1,42 @@
+# Create a new P2PKH transaction 
+
+def new_p2pkh():
+    # setup the network
+    setup('testnet')
+
+    # create transaction input from tx id of UTXO (contained 0.00009 tBTC)
+    # specify the tx id and the index of the input you are using 
+    txin = TxInput('d5653a50c29dd7bc38bae9add4f0b596fe4529ea408ea3197c3695cae261c682', 0)
+
+    # create transaction output using P2PKH scriptPubKey (locking script)
+    addr = P2pkhAddress('mreLpAzPWBtdwBC9NMEsBy1jkQ3phjy1Eh')
+    txout = TxOutput(to_satoshis(0.0005), Script(['OP_DUP', 'OP_HASH160', addr.to_hash160(),
+                                  'OP_EQUALVERIFY', 'OP_CHECKSIG']))
+    
+    # create another output to get back the change - remaining 0.0001 is tx fees
+    change_addr = P2pkhAddress('mjcJVG8riLe6jcvMPg4vvSbVc6csuq9a3w')
+    change_txout = TxOutput(to_satoshis(0.0003), Script(['OP_DUP', 'OP_HASH160',
+                                                         change_addr.to_hash160(), 'OP_EQUALVERIFY', 'OP_CHECKSIG']))
+    
+    # create transaction from inputs/outputs -- default locktime is used
+    tx = Transaction([txin], [txout, change_txout])
+
+    # use the private key corresponding to the address that contains the UTXO to sign the input
+    sk = PrivateKey('cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZoy51EpQYjzbnVX') 
+    
+    # from address corresponding to the input
+    from_addr = P2pkhAddress('mjcJVG8riLe6jcvMPg4vvSbVc6csuq9a3w') 
+    sig = sk.sign_input(tx, 0, Script(['OP_DUP', 'OP_HASH160', from_addr.to_hash160(), 
+                                       'OP_EQUALVERIFY', 'OP_CHECKSIG']))
+    
+    # get public key as hex
+    pk = sk.get_public_key().to_hex()
+
+    # set the scriptSig (unlocking script)
+    txin.script_sig = Script([sig, pk])
+    signed_tx = tx.serialize()
+    
+    # print raw signed transaction ready to be broadcasted
+    print("\nRaw signed transaction:\n" + signed_tx)
+
+new_p2pkh()
