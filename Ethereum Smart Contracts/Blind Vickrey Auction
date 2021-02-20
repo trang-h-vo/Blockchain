@@ -1,0 +1,153 @@
+// CONTRACT PROPERTIES:
+
+// Anyone can participate and bid any amount of ether
+// The auction ends when MAX_USERS have submitted a bid.
+
+// Only the contract owner can call the function that decide on the winner, but he can do that only when enough people have bid
+// The highest bidder wins the aution but pays the second best price 
+
+// The winner get marked as "winner" inside the smart contract and everyone can see it
+// The losers must be reimbursed
+
+// Only the contract owner should be able to withdraw from the contract once the auction is done (he can withdraw the price paid by the winner)
+// Only the contract owner should be able to call a function that reset everything and open the same contract again for an other auction
+
+// ATTENTION: A BUG with the status of the Revealing Period (bool OpenToReveal): when revealing time allowed is up, it should change to 'false'
+// However, it's meant to display the progress and doesn't affect the contract execution
+
+// SPDX-License-Identifier: GPL-3.0
+// @title VickreyAuction
+pragma solidity ^0.4.21;
+
+contract Owned {
+	address owner;
+
+	// Contract constructor: set owner
+	constructor() public {
+		owner = msg.sender;
+	}
+
+	// Access control modifier
+	modifier onlyOwner {
+	    require(msg.sender == owner,
+                "Only the contract owner can call this function");
+	    _;
+	}
+}
+
+contract MidnightVickreyAuction5 is Owned {
+    // 1. Initial setup
+    address seller;
+
+    // initial conditions
+    uint public count_bidders;
+    uint public max_bidders = 3;
+    
+    uint startingPrice = 0.1 ether;      // can be set public
+    bool public OpenToBid;               // bidding ends when count_bidders hits the limit
+    
+    uint public startOfRevealingTime;
+    uint revealingPeriod = 15 minutes;      // can be set public
+    uint endOfRevealingTime;
+    bool public OpenToReveal;
+    bool public AuctionInProgress;
+    
+    // track results
+    address highBidder;
+    uint highBid;
+    uint secondBid;
+    
+    // track bidder's revealing status
+    mapping(address => bool) public revealedList;
+    
+    // declare winner
+    address public Winner;
+    uint public WinningBid;
+
+    // 2. Seller starts a new Auction
+    function StartNewVickreyAuction() public onlyOwner {
+        count_bidders = 0;
+        OpenToBid = true;                          
+        OpenToReveal = false;                     
+        AuctionInProgress = true;                 
+
+        seller = msg.sender;
+
+        highBidder = seller;            // default values, to be updated during biddingPeriod
+        highBid = startingPrice;
+        secondBid = startingPrice;
+
+        // the seller can't bid, but this simplifies withdrawal logic later on
+        revealedList[seller] = true;        // as only revealed bidders can withdraw
+    }
+
+    mapping(address => uint) balanceOf;
+    mapping(address => bytes32) hashedBidOf;
+    
+    // 3. Bidding starts now
+    function bidCoin(bytes32 hash) public payable {
+        require(msg.sender != seller);
+        require(count_bidders < max_bidders);
+        require(msg.value >= startingPrice);
+        
+        hashedBidOf[msg.sender] = hash;
+        balanceOf[msg.sender] += msg.value;
+        count_bidders += 1; 
+    
+        // update bidding progress
+            
+        if (count_bidders == max_bidders) {
+            OpenToBid = false;
+            OpenToReveal = true;
+            startOfRevealingTime = now;
+            endOfRevealingTime = startOfRevealingTime + revealingPeriod;
+        }
+    }
+    
+    // bidders are required to reveal their bids in order to get refund
+    function reveal(uint amount, uint nonce) public {
+        require(OpenToBid == false && OpenToReveal == true);
+        require(keccak256(abi.encodePacked(amount, nonce)) == hashedBidOf[msg.sender]);
+    
+        require(!revealedList[msg.sender]);
+        revealedList[msg.sender] = true;
+    
+        require(amount == balanceOf[msg.sender]);
+        
+        if (amount >= highBid) {
+            // update secondBid, highBid and highBidder
+            secondBid = highBid;
+            highBid = amount;
+            highBidder = msg.sender;
+            
+        } else if (amount > secondBid) {
+            secondBid = amount;
+        }
+        // update balance of highBidder and seller
+        balanceOf[seller] = secondBid;
+        balanceOf[highBidder] = highBid - secondBid;
+        
+        // update revealing progress
+        if(now >= endOfRevealingTime) {
+            OpenToReveal = false;
+        }
+    }
+    
+    // 4. Seller calls winner
+    function DeclareWinner() public onlyOwner returns (address, uint) {
+        require(now >= endOfRevealingTime);
+        Winner = highBidder;
+        WinningBid = highBid;
+        AuctionInProgress = false;
+        return (Winner, WinningBid);
+    }
+    
+    function BidRefund() public {
+        require(AuctionInProgress == false);
+        require(revealedList[msg.sender]);              // only when bidder has revealed their bid
+    
+        uint256 amount = balanceOf[msg.sender];
+        balanceOf[msg.sender] = 0;
+        msg.sender.transfer(amount);
+    }
+}
