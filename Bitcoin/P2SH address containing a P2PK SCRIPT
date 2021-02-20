@@ -1,0 +1,24 @@
+# Generate a P2SH address containing a P2PK script
+
+from bitcoinutils.setup import setup
+from bitcoinutils.keys import P2shAddress, PrivateKey, PublicKey
+from bitcoinutils.script import Script
+
+def gen_p2sh_address():
+    # Setup the network
+    setup('testnet')
+    
+    # public key 1
+    pk1 = '025ec5f8f5efa0ce5313c80f835c026301f520611fe00cd2491c4eed8beea25c89'
+    
+    # public key 2
+    pk2 = '03a683ed2b044c0a98c0f9e87f8e7640b033989ac79e6861ab2b4ddfff91831ba1'
+   
+    # create the redeem script
+    redeem_script = Script([2, pk1, pk2, 2, 'OP_CHECKMULTISIG'])
+
+    # generate P2SH address from the redeem script
+    addr = P2shAddress.from_script(redeem_script)
+    print('New P2SH address: ', addr.to_string())
+
+gen_p2sh_address()
