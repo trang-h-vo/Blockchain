@@ -1,0 +1,65 @@
+// Faucet properties:
+// Number of users is limited: max_user = n
+// Only those in max_users list can withdraw, but the number of withdrawals per user is not limited
+// At beginning, everyone can withdraw. When max_user is reached, no new user is accepted to withdraw
+// Specify the owner of the Faucet
+// Owner can reset the user list to allow new users to withdraw
+// Everyone can make deposit to the Faucet
+
+// SPDX-License-Identifier: GPL-3.0
+// Version of Solidity compiler this program was written for pragma solidity ^0.6.0;
+
+contract LokiFaucet {
+    
+    address owner;
+
+    // Contract constructor: set owner
+    constructor() public {
+        owner = msg.sender;
+    }
+    // set max_amount allowed to withdraw
+    uint public max_amount = 0.1 ether;
+    
+    // set user list
+    uint public max_users = 2;
+    address[] UserList;     
+    uint public count_users;
+    bool new_user;
+    
+    // Process new withdraw request, new user as default
+    function withdraw(uint withdraw_amount) public {
+        count_users = UserList.length;
+        new_user = true;
+        require(withdraw_amount <= max_amount);
+        
+        // check user list
+        for (uint i = 0; i < count_users; i++) {
+            if (UserList[i] == msg.sender) {
+                new_user = false;
+                
+            // allow registered user to withdraw 
+            msg.sender.transfer(withdraw_amount);
+            }
+        }    
+        if (count_users < max_users && new_user == true) {        
+            // add new user to list
+            UserList.push(msg.sender);
+            count_users += 1;
+            
+            // allow newly registered user to withdraw 
+            msg.sender.transfer(withdraw_amount);
+        }
+    }    
+    
+    // Accept any incoming amount
+    receive () external payable {}
+    
+    // Only owner can call this function
+    function ResetUsers() public {
+        require(msg.sender == owner);
+        while (UserList.length > 0) {
+            UserList.pop();                     // delete last element of array until it's empty
+        }
+        count_users = UserList.length;          // reset count_users
+    }
+}
