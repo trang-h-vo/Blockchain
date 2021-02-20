@@ -1,0 +1,22 @@
+# Generate a P2SH address containing non-standard script:
+# using a number as password and a public key
+
+from bitcoinutils.setup import setup
+from bitcoinutils.keys import P2shAddress, PrivateKey, PublicKey
+from bitcoinutils.script import Script
+
+def nonstd_p2sh_address():
+    # Setup the network
+    setup('testnet')
+    
+    # public key
+    pk = '03ff4ed02d37f55c0d6f420ba513d379dc7c88326b466de43eabbdf0afda3de877'
+    
+    # create the redeem script contains a number as password and a public key
+    redeem_script = Script(['OP_ADD', 'OP_3', 'OP_EQUALVERIFY', pk, 'OP_CHECKSIG'])
+
+    # generate P2SH address
+    addr = P2shAddress.from_script(redeem_script)
+    print('P2SH address containing non-standard script: ', addr.to_string())
+    
+nonstd_p2sh_address()
