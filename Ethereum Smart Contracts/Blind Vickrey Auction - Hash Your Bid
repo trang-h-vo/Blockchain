@@ -1,0 +1,12 @@
+// Hash the bid for testing: 
+
+// SPDX-License-Identifier: GPL-3.0
+// @title HashYourBid
+pragma solidity ^0.4.21;
+
+contract HashBid {
+    function HashYourBid (uint amount,  uint nonce) public pure returns (bytes32) {
+        bytes32 hashedBid = keccak256(abi.encodePacked(amount, nonce));
+        return hashedBid;
+    }
+}
